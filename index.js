@@ -34,7 +34,7 @@ AttakProcessor = {
         }
       }
 
-      if(event.Records) {
+      if(event && event.Records) {
         var payload = new Buffer(event.Records[0].kinesis.data, 'base64').toString('ascii');
         event = JSON.parse(payload);
       }
@@ -60,20 +60,22 @@ AttakProcessor = {
       })
 
       d.run(function() {
-        source.handler(event, context, function() {
+        var handler = source.handler ? source.handler : source
+
+        handler.call(source, event, context, function() {
           if (waitingEmits === 0) {
             callback()
           } else {
             didEnd = true
           }
-        });
+        })
       })
     }
   },
 
   getEmit: function(emitNotify, emitDoneNotify, processor, topology, source, handlerOpts, event, context) {
     return function(topic, data, opts, cb) {
-      emitNotify()
+      emitNotify(topic, data, opts)
 
       if (cb === undefined && opts !== undefined && opts.constructor === Function) {
         cb = opts
