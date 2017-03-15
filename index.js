@@ -1,3 +1,5 @@
+"use strict"
+
 var AWS = require('aws-sdk')
 var uuid = require('uuid')
 var async = require('async')
