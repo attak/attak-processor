@@ -34,7 +34,7 @@ var AttakProcessor = {
 
       function callback() {
         if (threwException === false) {
-          console.log("CALLING BACK WITH", callbackErr, callbackData)
+          console.log("CALLING BACK WITH", callbackErr, callbackData, finalCallback)
           console.trace()
           finalCallback(callbackErr, callbackData)
         }
