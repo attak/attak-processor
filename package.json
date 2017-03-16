@@ -1,6 +1,6 @@
 {
   "name": "attak-processor",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "description": "",
   "main": "index.js",
   "scripts": {

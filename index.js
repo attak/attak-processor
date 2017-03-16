@@ -18,21 +18,23 @@ var getNext = function(topology, topic, current) {
   return next;
 };
 
-guid = uuid.v1()
+var guid = uuid.v1()
 
-AttakProcessor = {
+var AttakProcessor = {
 
   handler: function(processor, topology, source, handlerOpts) {
     return function(event, context, finalCallback) {
       context.topology = topology
       
       var didEnd = false
+      var callbackErr = undefined
       var waitingEmits = 0
+      var callbackData = undefined
       var threwException = false
 
       function callback() {
         if (threwException === false) {
-          finalCallback.apply(this, arguments)
+          finalCallback(callbackErr, callbackData)
         }
       }
 
@@ -54,9 +56,10 @@ AttakProcessor = {
 
       context.emit = AttakProcessor.getEmit(emitNotify, emitDoneNotify, processor, topology, source, handlerOpts, event, context)
 
-      d = domain.create()
+      var d = domain.create()
 
       d.on('error', function(err) {
+        console.log("EXCEPTION", err)
         callback(err)
         threwException = true
       })
@@ -64,7 +67,9 @@ AttakProcessor = {
       d.run(function() {
         var handler = source.handler ? source.handler : source
 
-        handler.call(source, event, context, function() {
+        handler.call(source, event, context, function(err, results) {
+          callbackErr = err
+          callbackData = results
           if (waitingEmits === 0) {
             callback()
           } else {
