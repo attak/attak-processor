@@ -34,6 +34,8 @@ var AttakProcessor = {
 
       function callback() {
         if (threwException === false) {
+          console.log("CALLING BACK WITH", callbackErr, callbackData)
+          console.trace()
           finalCallback(callbackErr, callbackData)
         }
       }
@@ -68,6 +70,7 @@ var AttakProcessor = {
         var handler = source.handler ? source.handler : source
 
         handler.call(source, event, context, function(err, results) {
+          console.log("HANDLER FINISHED", err, results, waitingEmits)
           callbackErr = err
           callbackData = results
           if (waitingEmits === 0) {
