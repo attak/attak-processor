@@ -34,7 +34,7 @@ var AttakProcessor = {
 
       function callback() {
         var requestBody = {
-          body: callbackData,
+          body: JSON.stringify(callbackData),
           statusCode: callbackErr ? 500 : 200
         }
 
