@@ -33,11 +33,12 @@ var AttakProcessor = {
       var threwException = false
 
       function callback() {
-        if (threwException === false) {
-          console.log("CALLING BACK WITH", callbackErr, callbackData, finalCallback)
-          console.trace()
-          finalCallback(callbackErr, callbackData)
+        var requestBody = {
+          body: callbackData,
+          statusCode: callbackErr ? 500 : 200
         }
+
+        finalCallback(callbackErr, requestBody)
       }
 
       if(event && event.Records) {
