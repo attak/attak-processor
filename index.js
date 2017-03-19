@@ -1,9 +1,12 @@
 "use strict"
 
+var fs = require('fs')
 var AWS = require('aws-sdk')
 var uuid = require('uuid')
 var async = require('async')
 var domain = require('domain')
+var extend = require('extend')
+var TopologyUtils = require('./topology_utils')
 
 var getNext = function(topology, topic, current) {
   var i, len, next, ref, stream;
@@ -21,9 +24,13 @@ var getNext = function(topology, topic, current) {
 var guid = uuid.v1()
 
 var AttakProcessor = {
+  utils: {
+    topology: TopologyUtils
+  },
 
   handler: function(processor, topology, source, handlerOpts) {
-    return function(event, context, finalCallback) {
+    return function(event, awsContext, finalCallback) {
+      var context = {aws: awsContext}
       context.topology = topology
       
       var didEnd = false
@@ -33,7 +40,7 @@ var AttakProcessor = {
       var threwException = false
 
       function callback() {
-        if (callbackData.body) {
+        if (callbackData && callbackData.body) {
           var requestBody = callbackData
         } else {
           var requestBody = {
@@ -62,6 +69,8 @@ var AttakProcessor = {
       }
 
       context.emit = AttakProcessor.getEmit(emitNotify, emitDoneNotify, processor, topology, source, handlerOpts, event, context)
+      context.invoke = AttakProcessor.getInvoke(processor, topology, source, handlerOpts, event, context)
+      context.invokeLocal = AttakProcessor.getInvokeLocal(processor, topology, source, handlerOpts, event, context)
 
       var d = domain.create()
 
@@ -75,7 +84,6 @@ var AttakProcessor = {
         var handler = source.handler ? source.handler : source
 
         handler.call(source, event, context, function(err, results) {
-          console.log("HANDLER FINISHED", err, results, waitingEmits)
           callbackErr = err
           callbackData = results
           if (waitingEmits === 0) {
@@ -84,6 +92,48 @@ var AttakProcessor = {
             didEnd = true
           }
         })
+      })
+    }
+  },
+
+  getInvoke: function(processor, topology, source, handlerOpts, event, context) {
+    return function(target, data, opts, cb) {
+      if (cb === undefined && opts !== undefined && opts.constructor === Function) {
+        cb = opts
+        opts = undefined
+      }
+    }
+
+    var lambda = new AWS.Lambda({
+      region: handlerOpts.region || 'us-east-1'
+    })
+
+    var params = {
+      FunctionName: target
+    }
+
+    if (data) {
+      params.Payload = new Buffer(data).toString('base64')
+    }
+
+    lambda.invoke(params, function(err, results) {
+      cb(err, results)
+    })
+  },
+
+  getInvokeLocal: function(processor, topology, source, handlerOpts, event, context) {
+    return function(target, data, opts, cb) {
+      if (cb === undefined && opts !== undefined && opts.constructor === Function) {
+        cb = opts
+        opts = undefined
+      }
+    
+      var impl = TopologyUtils.getProcessor({}, topology, target)
+      var handler = AttakProcessor.handler(target, topology, impl, handlerOpts)
+      var childContext = extend(true, {}, context)
+
+      handler(data, childContext, function(err, results) {
+        cb(err, results)
       })
     }
   },
