@@ -75,8 +75,8 @@ var AttakProcessor = {
       var d = domain.create()
 
       d.on('error', function(err) {
-        console.log("EXCEPTION", err)
-        callback(err)
+        callbackErr = err
+        callback()
         threwException = true
       })
 
