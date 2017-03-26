@@ -30,7 +30,8 @@ var AttakProcessor = {
 
   handler: function(processor, topology, source, handlerOpts) {
     return function(event, awsContext, finalCallback) {
-      var context = {aws: awsContext}
+      var context = awsContext.aws ? awsContext : {aws: awsContext}
+
       context.topology = topology
       
       var didEnd = false
