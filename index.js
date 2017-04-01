@@ -30,6 +30,10 @@ var AttakProcessor = {
 
   handler: function(processor, topology, source, handlerOpts) {
     return function(event, awsContext, finalCallback) {
+      if (event.attakProcessorVerify) {
+        return finalCallback({ok: true})
+      }
+
       var context = awsContext.aws ? awsContext : {aws: awsContext}
 
       context.topology = topology
@@ -44,8 +48,14 @@ var AttakProcessor = {
         if (callbackData && callbackData.body) {
           var requestBody = callbackData
         } else {
+          if (handlerOpts.environment === 'development') {
+            var body = requestBody || callbackErr || null
+          } else {
+            var body = requestBody || null
+          }
+
           var requestBody = {
-            body: JSON.stringify(callbackData || null),
+            body: JSON.stringify(body),
             statusCode: callbackErr ? 500 : 200
           }
         }
