@@ -1,19 +1,21 @@
-// Compiled to JS from http://github.com/attak/attak/blob/master/lib/topology.coffee
 var TopologyUtils, nodePath;
 
 nodePath = require('path');
 
 TopologyUtils = {
   loadTopology: function(opts) {
-    var file, files, i, index, j, k, len, len1, len2, name, processorPath, processors, ref, ref1, ref2, ref3, stream, topology, workingDir;
+    var file, files, i, index, j, k, len, len1, len2, name, processorPath, processors, ref, ref1, ref2, ref3, ref4, stream, topology, workingDir;
     workingDir = opts.cwd || process.cwd();
     topology = opts.topology || require(workingDir);
-    if (topology.streams.constructor === Function) {
+    if (topology.name === void 0) {
+      throw new Error("Error loading topology: missing name");
+    }
+    if (((ref = topology.streams) != null ? ref.constructor : void 0) === Function) {
       topology.streams = topology.streams();
     }
-    ref = topology.streams;
-    for (index = i = 0, len = ref.length; i < len; index = ++i) {
-      stream = ref[index];
+    ref1 = topology.streams || [];
+    for (index = i = 0, len = ref1.length; i < len; index = ++i) {
+      stream = ref1[index];
       if (stream.constructor === Array) {
         topology.streams[index] = {
           from: stream[0],
@@ -22,9 +24,9 @@ TopologyUtils = {
         };
       }
     }
-    if (((ref1 = topology.processors) != null ? ref1.constructor : void 0) === Function) {
+    if (((ref2 = topology.processors) != null ? ref2.constructor : void 0) === Function) {
       topology.processors = topology.processors();
-    } else if (((ref2 = topology.processors) != null ? ref2.constructor : void 0) === String) {
+    } else if (((ref3 = topology.processors) != null ? ref3.constructor : void 0) === String) {
       processorPath = nodePath.resolve(workingDir, topology.processors);
       files = fs.readdirSync(processorPath);
       processors = {};
@@ -39,9 +41,9 @@ TopologyUtils = {
       topology.processors = processors;
     } else if (topology.processors === void 0 && topology.processor.constructor === Function) {
       processors = {};
-      ref3 = topology.streams;
-      for (k = 0, len2 = ref3.length; k < len2; k++) {
-        stream = ref3[k];
+      ref4 = topology.streams;
+      for (k = 0, len2 = ref4.length; k < len2; k++) {
+        stream = ref4[k];
         if (processors[stream.to] === void 0) {
           processors[stream.to] = stream.to;
         }
@@ -65,11 +67,9 @@ TopologyUtils = {
     } else {
       procData = topology.processors[name];
     }
-
-    if (procData === undefined) {
-      console.log("MISSING DATA FOR PROCESSOR", name, topology)
+    if (procData === void 0) {
+      throw new Error("Failed to find processor " + name);
     }
-
     if (procData.constructor === String) {
       source = procData;
     } else if ((procData != null ? procData.constructor : void 0) === Function || typeof (procData != null ? procData.constructor : void 0) === 'function') {
