@@ -61,7 +61,6 @@ var AttakProcessor = {
           }
         }
 
-        console.log("HANDLER FINAL CALLBACK", callbackErr, callbackData)
         finalCallback(callbackErr, requestBody)
       }
 
