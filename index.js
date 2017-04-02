@@ -48,16 +48,16 @@ var AttakProcessor = {
         if (callbackData && callbackData.body) {
           var requestBody = callbackData
         } else {
+          if (handlerOpts.environment === 'development') {
+            var body = callbackData || callbackErr || null
+            callbackErr = undefined
+          } else {
+            var body = callbackData || null
+          }
+
           var requestBody = {
             body: JSON.stringify(body),
             statusCode: callbackErr ? 500 : 200
-          }
-
-          if (handlerOpts.environment === 'development') {
-            var body = requestBody || callbackErr || null
-            callbackErr = undefined
-          } else {
-            var body = requestBody || null
           }
         }
 
