@@ -65,7 +65,7 @@ TopologyUtils = {
     } else {
       procData = topology.processors[name];
     }
-    if (procData.constructor === String) {
+    if (procData && procData.constructor === String) {
       source = procData;
     } else if ((procData != null ? procData.constructor : void 0) === Function || typeof (procData != null ? procData.constructor : void 0) === 'function') {
       source = procData;
