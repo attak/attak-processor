@@ -65,7 +65,12 @@ TopologyUtils = {
     } else {
       procData = topology.processors[name];
     }
-    if (procData && procData.constructor === String) {
+
+    if (procData === undefined) {
+      console.log("MISSING DATA FOR PROCESSOR", name, topology)
+    }
+
+    if (procData.constructor === String) {
       source = procData;
     } else if ((procData != null ? procData.constructor : void 0) === Function || typeof (procData != null ? procData.constructor : void 0) === 'function') {
       source = procData;
