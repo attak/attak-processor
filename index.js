@@ -164,7 +164,7 @@ var AttakProcessor = {
       async.each(nextProcs, function(nextProc, done) {
         var kinesis = new AWS.Kinesis({
           region: handlerOpts.region || 'us-east-1',
-          endpoint: handlerOpts.endpoints.kinesis
+          endpoint: handlerOpts.endpoints ? handlerOpts.endpoints.kinesis : undefined
         });
 
         var queueData = {
