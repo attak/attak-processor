@@ -36,6 +36,7 @@ var AttakProcessor = {
 
       var context = awsContext.aws ? awsContext : {aws: awsContext}
 
+      context.endpoints = context.endpoints || {}
       context.topology = topology
       
       var didEnd = false
