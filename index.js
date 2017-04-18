@@ -31,7 +31,7 @@ var AttakProcessor = {
   handler: function(processor, topology, source, handlerOpts) {
     return function(event, awsContext, finalCallback) {
       if (event.attakProcessorVerify) {
-        return finalCallback({ok: true})
+        return finalCallback(null, {ok: true})
       }
 
       var context = awsContext.aws ? awsContext : {aws: awsContext}
@@ -46,7 +46,7 @@ var AttakProcessor = {
       var threwException = false
 
       function callback() {
-        if (callbackData && callbackData.body) {
+        if (callbackData && (callbackData.body || callbackData.headers)) {
           var requestBody = callbackData
         } else {
           if (handlerOpts.environment === 'development') {
@@ -81,6 +81,16 @@ var AttakProcessor = {
         }
       }
 
+      context.succeed = function(data) {
+        callbackData = data
+        callback()
+      }
+
+      context.fail = function(err) {
+        callbackErr = err
+        callback()
+      }
+
       context.emit = AttakProcessor.getEmit(emitNotify, emitDoneNotify, processor, topology, source, handlerOpts, event, context)
       context.invoke = AttakProcessor.getInvoke(processor, topology, source, handlerOpts, event, context)
       context.invokeLocal = AttakProcessor.getInvokeLocal(processor, topology, source, handlerOpts, event, context)
@@ -88,6 +98,7 @@ var AttakProcessor = {
       var d = domain.create()
 
       d.on('error', function(err) {
+        console.log("CAUGHT ERROR", err, err.stack)
         callbackErr = err
         callback()
         threwException = true
