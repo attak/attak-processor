@@ -9,17 +9,16 @@ var extend = require('extend')
 var TopologyUtils = require('./topology_utils')
 
 var getNext = function(topology, topic, current) {
-  var i, len, next, ref, stream;
-  next = [];
-  ref = topology.streams;
-  for (i = 0, len = ref.length; i < len; i++) {
-    stream = ref[i];
+  var next = []
+  for (var streamName in topology.streams) {
+    var stream = topology.streams[streamName]
     if (stream.from === current && (stream.topic || topic) === topic) {
-      next.push(stream.to);
+      next.push(stream.to)
     }
   }
-  return next;
-};
+
+  return next
+}
 
 var guid = uuid.v1()
 
@@ -35,8 +34,6 @@ var AttakProcessor = {
       }
 
       var context = awsContext.aws ? awsContext : {aws: awsContext}
-
-      context.aws.endpoints = context.aws.endpoints || {}
       context.topology = topology
       
       var didEnd = false
@@ -172,10 +169,11 @@ var AttakProcessor = {
       }
 
       var nextProcs = getNext(context.topology, topic, processor);
+      console.log("GOT EMIT", topic, data, nextProcs, context.topology, processor)
       async.each(nextProcs, function(nextProc, done) {
         var kinesis = new AWS.Kinesis({
           region: handlerOpts.region || 'us-east-1',
-          endpoint: handlerOpts.endpoints ? handlerOpts.endpoints.kinesis : undefined
+          endpoint: handlerOpts.services ? handlerOpts.services['AWS:Kinesis'].endpoint : undefined
         });
 
         var queueData = {
@@ -194,9 +192,10 @@ var AttakProcessor = {
           PartitionKey: guid,
         };
         
+        console.log("EMIT PUT RECORD", data)
         kinesis.putRecord(params, function(err, results) {
-          done(err);
-        });
+            done(err);
+          });
       }, function(err) {
         emitDoneNotify()
         if (cb) {

@@ -4,34 +4,48 @@ nodePath = require('path');
 
 TopologyUtils = {
   loadTopology: function(opts) {
-    var file, files, i, index, j, k, len, len1, len2, name, processorPath, processors, ref, ref1, ref2, ref3, ref4, stream, topology, workingDir;
+    var file, files, i, len, name, processorPath, processors, ref, ref1, ref2, ref3, ref4, ref5, ref6, stream, streamName, streamsObj, topology, workingDir;
     workingDir = opts.cwd || process.cwd();
-    topology = opts.topology || require(workingDir);
+    if (opts.topology) {
+      if (opts.topology.constructor === String) {
+        topology = require(nodePath.resolve(workingDir, opts.topology));
+      } else {
+        topology = opts.topology;
+      }
+    } else {
+      topology = require(workingDir);
+    }
     if (topology.name === void 0) {
       throw new Error("Error loading topology: missing name");
     }
     if (((ref = topology.streams) != null ? ref.constructor : void 0) === Function) {
       topology.streams = topology.streams();
     }
-    ref1 = topology.streams || [];
-    for (index = i = 0, len = ref1.length; i < len; index = ++i) {
-      stream = ref1[index];
-      if (stream.constructor === Array) {
-        topology.streams[index] = {
-          from: stream[0],
-          to: stream[1],
-          topic: stream[2]
-        };
+    if (((ref1 = topology.streams) != null ? ref1.constructor : void 0) === Array) {
+      streamsObj = {};
+      ref2 = topology.streams || {};
+      for (streamName in ref2) {
+        stream = ref2[streamName];
+        if (stream.constructor === Array) {
+          stream = {
+            from: stream[0],
+            to: stream[1],
+            topic: stream[2]
+          };
+        }
+        streamName = topology.name + "-" + stream.from + "-" + stream.to;
+        streamsObj[streamName] = stream;
       }
+      topology.streams = streamsObj;
     }
-    if (((ref2 = topology.processors) != null ? ref2.constructor : void 0) === Function) {
+    if (((ref3 = topology.processors) != null ? ref3.constructor : void 0) === Function) {
       topology.processors = topology.processors();
-    } else if (((ref3 = topology.processors) != null ? ref3.constructor : void 0) === String) {
+    } else if (((ref4 = topology.processors) != null ? ref4.constructor : void 0) === String) {
       processorPath = nodePath.resolve(workingDir, topology.processors);
       files = fs.readdirSync(processorPath);
       processors = {};
-      for (j = 0, len1 = files.length; j < len1; j++) {
-        file = files[j];
+      for (i = 0, len = files.length; i < len; i++) {
+        file = files[i];
         if (file === '.DS_Store') {
           continue;
         }
@@ -39,11 +53,11 @@ TopologyUtils = {
         processors[name] = topology.processors + "/" + file;
       }
       topology.processors = processors;
-    } else if (topology.processors === void 0 && topology.processor.constructor === Function) {
+    } else if (topology.processors === void 0 && ((ref5 = topology.processor) != null ? ref5.constructor : void 0) === Function) {
       processors = {};
-      ref4 = topology.streams;
-      for (k = 0, len2 = ref4.length; k < len2; k++) {
-        stream = ref4[k];
+      ref6 = topology.streams;
+      for (streamName in ref6) {
+        stream = ref6[streamName];
         if (processors[stream.to] === void 0) {
           processors[stream.to] = stream.to;
         }
@@ -52,6 +66,8 @@ TopologyUtils = {
         }
       }
       topology.processors = processors;
+    } else if (topology.processors === void 0) {
+      topology.processors = {};
     }
     return topology;
   },
