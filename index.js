@@ -67,7 +67,7 @@ var AttakProcessor = {
         event = JSON.parse(payload);
       }
 
-      function emitNotify() {
+      function emitNotify(topic, data, opts) {
         waitingEmits += 1
       }
 
@@ -103,14 +103,12 @@ var AttakProcessor = {
 
       d.run(function() {
         var handler = source.handler ? source.handler : source
-
         handler.call(source, event, context, function(err, results) {
           callbackErr = err
           callbackData = results
+          didEnd = true
           if (waitingEmits === 0) {
             callback()
-          } else {
-            didEnd = true
           }
         })
       })
@@ -160,7 +158,7 @@ var AttakProcessor = {
   },
 
   getEmit: function(emitNotify, emitDoneNotify, processor, topology, source, handlerOpts, event, context) {
-    return function(topic, data, opts, cb) {
+    var emit = function(topic, data, opts, cb) {
       emitNotify(topic, data, opts)
 
       if (cb === undefined && opts !== undefined && opts.constructor === Function) {
@@ -169,7 +167,7 @@ var AttakProcessor = {
       }
 
       var nextProcs = getNext(context.topology, topic, processor);
-      console.log("GOT EMIT", topic, data, nextProcs, context.topology, processor)
+      console.log("GOT EMIT", processor, topic, data, nextProcs, context.topology, processor, handlerOpts.onEmit)
       async.each(nextProcs, function(nextProc, done) {
         var kinesis = new AWS.Kinesis({
           region: handlerOpts.region || 'us-east-1',
@@ -202,6 +200,21 @@ var AttakProcessor = {
           cb(err)
         }
       })
+    }
+
+    if (handlerOpts.onEmit && handlerOpts.onEmit[processor]) {
+      return function(topic, data, opts, cb) {
+        return handlerOpts.onEmit[processor](topic, data, opts, function() {
+          emit(topic, data, opts, function(err) {
+            var done = cb || opts
+            if (done && done.constructor === Function) {
+              done(err)
+            }
+          })
+        })
+      }
+    } else {
+      return emit
     }
   }
 }
