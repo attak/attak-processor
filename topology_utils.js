@@ -4,7 +4,7 @@ nodePath = require('path');
 
 TopologyUtils = {
   loadTopology: function(opts) {
-    var file, files, i, len, name, processorPath, processors, ref, ref1, ref2, ref3, ref4, ref5, ref6, stream, streamName, streamsObj, topology, workingDir;
+    var file, files, i, len, name, objDefs, procData, procName, processorPath, processors, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, stream, streamName, streamsObj, topology, workingDir;
     workingDir = opts.cwd || process.cwd();
     if (opts.topology) {
       if (opts.topology.constructor === String) {
@@ -14,9 +14,6 @@ TopologyUtils = {
       }
     } else {
       topology = require(workingDir);
-    }
-    if (topology.name === void 0) {
-      throw new Error("Error loading topology: missing name");
     }
     if (((ref = topology.streams) != null ? ref.constructor : void 0) === Function) {
       topology.streams = topology.streams();
@@ -66,13 +63,26 @@ TopologyUtils = {
         }
       }
       topology.processors = processors;
-    } else if (topology.processors === void 0) {
-      topology.processors = {};
+    }
+    ref7 = topology.processors || {};
+    for (procName in ref7) {
+      procData = ref7[procName];
+      if (procData.constructor === String) {
+        topology.processors[procName] = {
+          path: procData
+        };
+      }
+    }
+    if (((ref8 = topology.api) != null ? ref8.constructor : void 0) === String) {
+      objDefs = {
+        handler: topology.api
+      };
+      topology.api = objDefs;
     }
     return topology;
   },
   getProcessor: function(program, topology, name) {
-    var procData, processor, source, workingDir;
+    var loading, procData, workingDir;
     workingDir = program.cwd || process.cwd();
     if (topology.processor) {
       procData = topology.processor(name);
@@ -86,22 +96,28 @@ TopologyUtils = {
     if (procData === void 0) {
       throw new Error("Failed to find processor " + name);
     }
+    loading = {};
     if (procData.constructor === String) {
-      source = procData;
-    } else if ((procData != null ? procData.constructor : void 0) === Function || typeof (procData != null ? procData.constructor : void 0) === 'function') {
-      source = procData;
-    } else {
-      source = procData.source;
-    }
-    if (source.handler) {
-      return processor = source;
-    } else if (source.constructor === Function) {
-      return processor = {
-        handler: source
+      loading = {
+        type: 'path',
+        path: procData
+      };
+    } else if ((procData != null ? procData.constructor : void 0) === Function) {
+      loading = {
+        type: 'dynamic',
+        impl: procData
       };
     } else {
-      return processor = program.processor || require(nodePath.resolve(workingDir, source));
+      loading = {
+        type: 'path',
+        path: procData.source || procData.path
+      };
     }
+    switch (loading.type) {
+      case 'path':
+        loading.impl = program.processor || require(nodePath.resolve(workingDir, source));
+    }
+    return loading;
   }
 };
 
