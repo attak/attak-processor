@@ -20,6 +20,31 @@ var getNext = function(topology, topic, current) {
   return next
 }
 
+function stringify(obj, replacer, spaces, cycleReplacer) {
+  return JSON.stringify(obj, serializer(replacer, cycleReplacer), spaces)
+}
+
+function serializer(replacer, cycleReplacer) {
+  var stack = [], keys = []
+
+  if (cycleReplacer == null) cycleReplacer = function(key, value) {
+    if (stack[0] === value) return "[Circular ~]"
+    return "[Circular ~." + keys.slice(0, stack.indexOf(value)).join(".") + "]"
+  }
+
+  return function(key, value) {
+    if (stack.length > 0) {
+      var thisPos = stack.indexOf(this)
+      ~thisPos ? stack.splice(thisPos + 1) : stack.push(this)
+      ~thisPos ? keys.splice(thisPos, Infinity, key) : keys.push(key)
+      if (~stack.indexOf(value)) value = cycleReplacer.call(this, key, value)
+    }
+    else stack.push(value)
+
+    return replacer == null ? value : replacer.call(this, key, value)
+  }
+}
+
 var guid = uuid.v1()
 
 var AttakProcessor = {
@@ -54,7 +79,7 @@ var AttakProcessor = {
           }
 
           var requestBody = {
-            body: JSON.stringify(body),
+            body: stringify(body),
             statusCode: callbackErr ? 500 : 200
           }
         }
@@ -102,7 +127,7 @@ var AttakProcessor = {
       })
 
       d.run(function() {
-        var handler = source.handler ? source.handler : source
+        var handler = source.handler || source.impl || source
         handler.call(source, event, context, function(err, results) {
           callbackErr = err
           callbackData = results
@@ -147,7 +172,7 @@ var AttakProcessor = {
         opts = undefined
       }
     
-      var impl = TopologyUtils.getProcessor({}, topology, target)
+      var impl = TopologyUtils.getProcessor({}, topology, target).impl
       var handler = AttakProcessor.handler(target, topology, impl, handlerOpts)
       var childContext = extend(true, {}, context)
 
@@ -167,7 +192,7 @@ var AttakProcessor = {
       }
 
       var nextProcs = getNext(context.topology, topic, processor);
-      console.log("GOT EMIT", processor, topic, data, nextProcs, context.topology, processor, handlerOpts.onEmit)
+      // console.log("GOT EMIT", processor, topic, data, nextProcs, context.topology, processor)
       async.each(nextProcs, function(nextProc, done) {
         var kinesis = new AWS.Kinesis({
           region: handlerOpts.region || 'us-east-1',
@@ -185,7 +210,7 @@ var AttakProcessor = {
         }
 
         var params = {
-          Data: new Buffer(JSON.stringify(queueData)),
+          Data: new Buffer(stringify(queueData)),
           StreamName: context.topology.name + '-' + processor + '-' + nextProc,
           PartitionKey: guid,
         };

@@ -79,11 +79,24 @@ TopologyUtils = {
       };
       topology.api = objDefs;
     }
+    if (topology["static"]) {
+      if (topology["static"].constructor === String) {
+        topology["static"] = {
+          "default": {
+            dir: topology["static"]
+          }
+        };
+      } else if (topology["static"].dir) {
+        topology["static"] = {
+          "default": topology["static"]
+        };
+      }
+    }
     return topology;
   },
-  getProcessor: function(program, topology, name) {
+  getProcessor: function(opts, topology, name) {
     var loading, procData, workingDir;
-    workingDir = program.cwd || process.cwd();
+    workingDir = opts.cwd || process.cwd();
     if (topology.processor) {
       procData = topology.processor(name);
     } else if (topology.processors.constructor === String) {
@@ -107,15 +120,25 @@ TopologyUtils = {
         type: 'dynamic',
         impl: procData
       };
-    } else {
+    } else if ((procData != null ? procData.handler : void 0) === Function) {
+      loading = {
+        type: 'dynamic',
+        impl: procData.handler
+      };
+    } else if ((procData != null ? procData.source : void 0) || (procData != null ? procData.path : void 0)) {
       loading = {
         type: 'path',
-        path: procData.source || procData.path
+        path: procData.path
+      };
+    } else {
+      loading = {
+        type: 'dynamic',
+        impl: procData
       };
     }
     switch (loading.type) {
       case 'path':
-        loading.impl = program.processor || require(nodePath.resolve(workingDir, source));
+        loading.impl = opts.processor || require(nodePath.resolve(workingDir, loading.path));
     }
     return loading;
   }
