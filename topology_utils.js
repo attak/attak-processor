@@ -4,8 +4,9 @@ nodePath = require('path');
 
 TopologyUtils = {
   loadTopology: function(opts) {
-    var file, files, i, len, name, objDefs, procData, procName, processorPath, processors, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, stream, streamName, streamsObj, topology, workingDir;
+    var environment, file, files, i, len, name, objDefs, procData, procName, processorPath, processors, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, stream, streamName, streamsObj, topology, workingDir;
     workingDir = opts.cwd || process.cwd();
+    environment = opts.environment || 'development';
     if (opts.topology) {
       if (opts.topology.constructor === String) {
         topology = require(nodePath.resolve(workingDir, opts.topology));
@@ -14,6 +15,9 @@ TopologyUtils = {
       }
     } else {
       topology = require(workingDir);
+    }
+    if (topology["default"]) {
+      topology = topology["default"];
     }
     if (((ref = topology.streams) != null ? ref.constructor : void 0) === Function) {
       topology.streams = topology.streams();
@@ -30,7 +34,7 @@ TopologyUtils = {
             topic: stream[2]
           };
         }
-        streamName = topology.name + "-" + stream.from + "-" + stream.to;
+        streamName = topology.name + "-" + stream.from + "-" + stream.to + "-" + environment;
         streamsObj[streamName] = stream;
       }
       topology.streams = streamsObj;
@@ -89,6 +93,13 @@ TopologyUtils = {
       } else if (topology["static"].dir) {
         topology["static"] = {
           "default": topology["static"]
+        };
+      }
+    }
+    if (topology.auth) {
+      if (topology.auth === true) {
+        topology.auth = {
+          "default": {}
         };
       }
     }

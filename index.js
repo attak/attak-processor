@@ -215,7 +215,6 @@ var AttakProcessor = {
           PartitionKey: guid,
         };
         
-        console.log("EMIT PUT RECORD", data)
         kinesis.putRecord(params, function(err, results) {
             done(err);
           });
